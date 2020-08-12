@@ -4,7 +4,7 @@ import argparse
 import logging
 import math
 import os
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
 import tqdm
@@ -54,7 +54,9 @@ def get_args() -> argparse.Namespace:
 
 
 def read_counts(
-    counts: List[str], suffix_to_remove: str = None, limit_inputs: int = None
+    counts: List[str],
+    suffix_to_remove: Optional[str] = None,
+    limit_inputs: Optional[int] = None,
 ) -> List[pd.DataFrame]:
     """Reads dataframes into memory assuming St. Jude Cloud counts files.
 
@@ -72,7 +74,9 @@ def read_counts(
         counts = counts[:limit_inputs]  # pylint: disable=bad-indentation
 
     for filename in tqdm.tqdm(counts, desc="Reading count files into memory"):
-        sample_name = os.path.basename(filename).replace(suffix_to_remove, "")
+        sample_name = os.path.basename(filename)
+        if suffix_to_remove:
+            sample_name = sample_name.replace(suffix_to_remove, "")
         dataframe = pd.read_csv(filename, sep="\t", header=None)
         dataframe.columns = ["Gene Name", sample_name]
         dataframe.set_index("Gene Name", inplace=True)
@@ -180,7 +184,7 @@ def join_dataframes_sequentially(dfs: List[pd.DataFrame]) -> pd.DataFrame:
     return result
 
 
-def run():
+def run() -> None:
     """Main method for module.
 
     Raises:
