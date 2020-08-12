@@ -37,3 +37,17 @@ jobs:
       - uses: lgeiger/black-action@v1.0.1
         with:
           args: "mergecounts --check"
+  mypy:
+    name: Check type annotations with MyPy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: '3.8'
+      - run: pip install --no-cache-dir poetry
+      - run: poetry install
+      - run: which python
+      - run: poetry run mypy mergecounts --strict
