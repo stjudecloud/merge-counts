@@ -11,6 +11,19 @@ import tqdm
 from logzero import logger
 
 
+def raise_error(
+    message: str,
+    postlude: str = "Please report this error by filing a Github issue at https://github.com/stjudecloud/merge-counts/issues.",
+) -> None:
+    """Raise a RuntimeError and suggest they report the issue.
+
+    Args:
+        message (str): message to be displayed to the user.
+        postlude (str, optional): message to be tacked onto the ends (Defaults to instructing the user to post issue to Github).
+    """
+    raise RuntimeError(message + "\n" + postlude)
+
+
 def get_args() -> argparse.Namespace:
     """Gets the command line arguments using argparse.
 
@@ -40,15 +53,21 @@ def get_args() -> argparse.Namespace:
     )
     subparsers = parser.add_subparsers(dest="subcommand", required=True)
 
-    recursive = subparsers.add_parser(
+    recursive_subcmd = subparsers.add_parser(
         "recursive", help="Recursively join counts files (fastest).", parents=[common]
     )
-    recursive.set_defaults(func=join_dataframes_recursively)
+    recursive_subcmd.set_defaults(func=join_dataframes_recursively)
 
-    sequential = subparsers.add_parser(
+    sequential_subcmd = subparsers.add_parser(
         "sequential", help="Sequential join counts files (legacy).", parents=[common]
     )
-    sequential.set_defaults(func=join_dataframes_sequentially)
+    sequential_subcmd.set_defaults(func=join_dataframes_sequentially)
+
+    subparsers.add_parser(
+        "concordance-test",
+        help="A test command that checks the concordance of recursive and sequential matrix creation.",
+        parents=[common],
+    )
 
     return parser.parse_args()
 
@@ -83,6 +102,45 @@ def read_counts(
         dfs.append(dataframe)
 
     return dfs
+
+
+def join_dataframes_sequentially(dfs: List[pd.DataFrame]) -> pd.DataFrame:
+    """Merges dataframes based on a sequential approach. This method takes much
+    longer than the recursive approach and should not be used other than as a sanity
+    check for the recursive algorithm.
+
+    Args:
+        dfs (List[pd.DataFrame]): Unmerged dataframes read directly from files.
+
+    Raises:
+        ValueError: must contain at least one count file to merge.
+        RuntimeError: sanity check to ensure the dataframe shape matches what is expected.
+
+    Returns:
+        pd.DataFrame: a single, merged dataframe for all counts.
+    """
+
+    num_dfs = len(dfs)
+    if num_dfs <= 0:
+        raise ValueError("Must contain at least one count file to merge.")
+
+    expected_result_shape = (dfs[0].shape[0], num_dfs)
+    result = None
+
+    for dataframe in tqdm.tqdm(dfs, desc="Merging sequentially"):
+        if result is None:
+            result = dataframe
+        else:
+            result = result.merge(
+                dataframe, how="outer", left_index=True, right_index=True
+            )
+
+    if not result.shape == expected_result_shape:  # type: ignore
+        raise_error(
+            f"Output matrix shape ({result.shape}) does not match expected shape ({expected_result_shape})!"  # type: ignore
+        )
+
+    return result
 
 
 def join_dataframes_recursively(dfs: List[pd.DataFrame]) -> pd.DataFrame:
@@ -132,56 +190,38 @@ def join_dataframes_recursively(dfs: List[pd.DataFrame]) -> pd.DataFrame:
         dfs = merged_dfs
 
     if not len(dfs) == 1:
-        raise RuntimeError(
-            "Math was incorrect! Program source needs attention. Please contact the author."
-        )
+        raise_error("Math was incorrect!")
 
     result = dfs[0]
     result.columns = sorted(result.columns)
 
     if not result.shape == expected_result_shape:
-        raise RuntimeError(
-            "Output matrix does not match expected shape! Please contact the author."
+        raise_error(
+            f"Output matrix shape ({result.shape}) does not match expected shape ({expected_result_shape})!"
         )
 
     return result
 
 
-def join_dataframes_sequentially(dfs: List[pd.DataFrame]) -> pd.DataFrame:
-    """Merges dataframes based on a sequential approach. This method takes much
-    longer than the recursive approach and should not be used other than as a sanity
-    check for the recursive algorithm.
+def concordance_test(dfs: List[pd.DataFrame]) -> None:
+    """Performs a concordance test between the sequential and recursive strategies
+    for merging matrices.
+
+    Raises:
+        AssertionError: if the matrices are not concordant.
 
     Args:
         dfs (List[pd.DataFrame]): Unmerged dataframes read directly from files.
-
-    Raises:
-        ValueError: must contain at least one count file to merge.
-        RuntimeError: sanity check to ensure the dataframe shape matches what is expected.
-
-    Returns:
-        pd.DataFrame: a single, merged dataframe for all counts.
     """
 
-    num_dfs = len(dfs)
-    if num_dfs <= 0:
-        raise ValueError("Must contain at least one count file to merge.")
-
-    expected_result_shape = (dfs[0].shape[0], num_dfs)
-    result = None
-
-    for dataframe in tqdm.tqdm(dfs, desc="Merging sequentially"):
-        if result is None:
-            result = dataframe
-        else:
-            result.merge(dataframe, how="outer", left_index=True, right_index=True)
-
-    if not result.shape == expected_result_shape:  # type: ignore
-        raise RuntimeError(
-            "Output matrix does not match expected shape! Please contact the author."
-        )
-
-    return result
+    logger.info("Concordance test has begun.")
+    logger.info("Merging dataframes sequentially.")
+    sequential_df = join_dataframes_sequentially(dfs)
+    logger.info("Merging dataframes recursively.")
+    recursive_df = join_dataframes_recursively(dfs)
+    logger.info("Asserting concordance between the two matrices.")
+    pd.testing.assert_frame_equal(sequential_df, recursive_df)
+    logger.info("Testing completed, result were concordant.")
 
 
 def run() -> None:
@@ -203,23 +243,26 @@ def run() -> None:
         limit_inputs=args.limit_inputs,
     )
 
-    logger.debug("Processing counts data using function %s .", args.func.__name__)
-    result = args.func(dfs)
+    if args.subcommand == "concordance-test":
+        concordance_test(dfs)
+    elif args.subcommand == "sequential" or args.subcommand == "recursive":
+        logger.debug("Processing counts data using function %s .", args.func.__name__)
+        result = args.func(dfs)
 
-    output_file = "counts-matrix." + args.output_file_type
-    if args.output_file:
-        output_file = args.output_file
+        output_file = "counts-matrix." + args.output_file_type
+        if args.output_file:
+            output_file = args.output_file
 
-    logger.debug("Writing results to %s.", output_file)
-    if args.output_file_type == "tsv":
-        result.to_csv(output_file, sep="\t")
-    elif args.output_file_type == "csv":
-        result.to_csv(output_file)
-    elif args.output_file_type == "hdf":
-        result.to_hdf(output_file, "counts")
-    else:
-        raise ValueError(
-            f"Unhandled output file type: {args.output_file_type}. Please contact the author."
-        )
+        logger.debug("Writing results to %s.", output_file)
+        if args.output_file_type == "tsv":
+            result.to_csv(output_file, sep="\t")
+        elif args.output_file_type == "csv":
+            result.to_csv(output_file)
+        elif args.output_file_type == "hdf":
+            result.to_hdf(output_file, "counts")
+        else:
+            raise ValueError(
+                f"Unhandled output file type: {args.output_file_type}. Please contact the author."
+            )
 
-    logger.debug("Completed writing matrix.")
+        logger.debug("Completed writing matrix.")
