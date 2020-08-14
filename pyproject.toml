@@ -40,6 +40,7 @@ logzero = "^1.5.0"
 mypy = "^0.782"
 pylint = "^2.5.3"
 black = "^19.10b0"
+python-semantic-release = "^7.2.2"
 
 [tool.poetry.scripts]
 stjudecloud-merge-counts = 'mergecounts.__main__:run'
