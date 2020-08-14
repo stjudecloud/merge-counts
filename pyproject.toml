@@ -44,3 +44,16 @@ python-semantic-release = "^7.2.2"
 
 [tool.poetry.scripts]
 stjudecloud-merge-counts = 'mergecounts.__main__:run'
+
+[tool.semantic_release]
+version_variable = "pyproject.toml:version"
+version_source = "commit"
+commit_subject = "chore: bumping version to v{version}"
+commit_message = ""
+commit_author = "St. Jude Cloud <support@stjude.cloud>"
+build_command = "poetry build"
+upload_to_release = "false"
+# check_build_status = true
+
+[tool.black]
+target-version = ['py36', 'py37', 'py38']
