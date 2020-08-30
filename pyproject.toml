@@ -35,6 +35,9 @@ pandas = "^1.1.0"
 tables = "^3.6.1"
 tqdm = "^4.48.2"
 logzero = "^1.5.0"
+dxpy = "^0.298.1"
+requests = "<2.24.0"
+"hurry.filesize" = "^0.9"
 
 [tool.poetry.dev-dependencies]
 mypy = "^0.782"

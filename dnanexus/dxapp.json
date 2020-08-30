@@ -1,0 +1,62 @@
+{
+  "name": "stjudecloud-merge-counts",
+  "title": "Merge Counts (St. Jude Cloud)",
+  "summary": "This app merges RNA-Seq expression count data from St. Jude Cloud into a single matrix for further analysis.",
+  "dxapi": "1.0.0",
+  "version": "1.0.0",
+  "inputSpec": [
+    {
+      "name": "counts",
+      "label": "Counts files",
+      "class": "array:file",
+      "optional": false,
+      "patterns": ["*.RNA-Seq.feature-counts.txt"],
+      "help": ""
+    },
+    {
+      "name": "output_filetype",
+      "label": "Output File Type",
+      "class": "string",
+      "optional": true,
+      "default": "tsv",
+      "choices": ["csv", "tsv", "hdf"],
+      "help": "Filetype for the output counts matrix."
+    }
+  ],
+  "outputSpec": [
+    {
+      "name": "counts_matrix",
+      "label": "Merged counts matrix",
+      "class": "file",
+      "patterns": ["*"],
+      "help": ""
+    },
+    {
+      "name": "attributes_matrix",
+      "label": "Attributes matrix",
+      "class": "file",
+      "patterns": ["*"],
+      "help": ""
+    }
+  ],
+  "access": {"network": ["*"]},
+  "runSpec": {
+    "timeoutPolicy": {
+      "*": { "hours": 8 }
+    },
+    "interpreter": "bash",
+    "file": "src/stjudecloud-merge-counts.sh",
+    "distribution": "Ubuntu",
+    "release": "16.04",
+    "version": "1"
+  },
+  "regionalOptions": {
+    "azure:westus": {
+      "systemRequirements": {
+        "*": {
+          "instanceType": "azure:mem1_ssd1_x8"
+        }
+      }
+    }
+  }
+}
