@@ -1,17 +1,20 @@
+"""Matrix utilities for the merge-counts command line tool."""
+
 import argparse
 import math
-import os
 import shutil
 import tempfile
+from typing import Optional, List
+
 import tqdm
 import pandas as pd
 from logzero import logger
-from typing import Optional, List
 from . import cache as _cache, dx, errors
 
 ######################
 # Merging DataFrames #
 ######################
+
 
 def join_dataframes_sequentially(dfs: List[pd.DataFrame]) -> pd.DataFrame:
     """Merges dataframes based on a sequential approach. This method takes much
@@ -28,6 +31,9 @@ def join_dataframes_sequentially(dfs: List[pd.DataFrame]) -> pd.DataFrame:
     Returns:
         pd.DataFrame: a single, merged dataframe for all counts.
     """
+
+    # don't modify the original dfs object.
+    dfs = dfs.copy()
 
     num_dfs = len(dfs)
     if num_dfs <= 0:
@@ -66,6 +72,9 @@ def join_dataframes_recursively(dfs: List[pd.DataFrame]) -> pd.DataFrame:
     Returns:
         pd.DataFrame: a single, merged dataframe for all counts.
     """
+
+    # don't modify the original dfs object.
+    dfs = dfs.copy()
 
     num_dfs = len(dfs)
     if num_dfs <= 0:
@@ -137,9 +146,9 @@ def concordance_test(dfs: List[pd.DataFrame]) -> None:
 # Utility functions #
 #####################
 
+
 def read_counts(
-    counts: List[tuple],
-    limit_inputs: Optional[int] = None,
+    counts: List[tuple], limit_inputs: Optional[int] = None,
 ) -> List[pd.DataFrame]:
     """Reads dataframes into memory assuming St. Jude Cloud counts files.
 
@@ -155,20 +164,58 @@ def read_counts(
     if limit_inputs:
         counts = counts[:limit_inputs]  # pylint: disable=bad-indentation
 
-    for (sample_name, filename) in tqdm.tqdm(counts, desc="Reading count files into memory"):
+    for (sample_name, filename) in tqdm.tqdm(
+        counts, desc="Reading count files into memory"
+    ):
         dataframe = pd.read_csv(filename, sep="\t", header=None)
         dataframe.columns = ["Gene Name", sample_name]
         dataframe.set_index("Gene Name", inplace=True)
         dfs.append(dataframe)
 
+    expected_shape = dfs[0].shape
+    for dataframe in dfs:
+        if dataframe.shape != expected_shape:
+            errors.raise_error("Dataframe did not conform to expected shape after download! "+
+                               f"Expected: {expected_shape}, Actual: {dataframe.shape}.")
+
     return dfs
 
-def randomly_sample_gene_counts(df: pd.DataFrame, n=100):
-    results = []
-    
-def download_and_merge_counts(args: argparse.Namespace, merge_mode: str) -> pd.DataFrame:
+
+def randomly_sample_coherence_check(
+    dataframes: List[pd.DataFrame], merged: pd.DataFrame
+):
+    """Check that the merged counts matrix looks consistent with the original counts
+    files by looking at a random gene per count file and ensuring it has the same
+    value in the merged matrix. This will catch the majority of bugs that could be
+    introduced into the code in real-time.
+
+    Args:
+        dataframes (List[pd.DataFrame]): all individual dataframes of HTSeq counts.
+        merged (pd.DataFrame): the merged HTSeq count matrix.
+    """
+
+    for dataframe in dataframes:
+        _sample = dataframe.sample(axis=0)
+        gene = _sample.index.values[0]
+        samplename = _sample.columns.values[0]
+        value_in_individual = _sample.values[0][0]
+
+        value_in_merged = merged[samplename][gene]
+        if value_in_individual != value_in_merged:
+            errors.raise_error(
+                "Found inconsistencies when randomly sampling counts "
+                + f"for coherence. Specifically, {samplename} for gene "
+                + f"{gene} has count {value_in_individual} in the standalone "
+                + f"HTSeq count file but has value {value_in_merged} in the "
+                + "merged counts matrix. This must be fixed by the developers!"
+            )
+
+
+def download_and_merge_counts(
+    args: argparse.Namespace, merge_mode: str
+) -> pd.DataFrame:
     """I've decided to pull out the common functionality for downloading and merging
-    the counts matrices into this method to keep the subcommand code DRY. 
+    the counts matrices into this method to keep the subcommand code DRY.
 
     Arguments:
         args (argparse.Namespace): the arguments parsed from the command line.
@@ -178,23 +225,34 @@ def download_and_merge_counts(args: argparse.Namespace, merge_mode: str) -> pd.D
         (pd.DataFrame): the merged `pandas.DataFrame`.
     """
 
-    ALLOWED_MERGE_MODES = ['sequential', 'recursive']
+    allowed_merge_modes = ["sequential", "recursive"]
 
     merge_mode = merge_mode.lower()
-    if merge_mode not in [amm.lower() for amm in ALLOWED_MERGE_MODES]:
+    if merge_mode not in [amm.lower() for amm in allowed_merge_modes]:
         errors.raise_error(f"Unsupported merge_mode provided {merge_mode}.")
 
     download_directory = None
 
     if args.developer_mode:
         # enable cache, get the existing one or create a new one
-        download_directory = _cache.get_cache_folder() or _cache.create_new_cache_folder()
-        logger.info(f"Using cache at directory: {download_directory}.")
+        download_directory = (
+            _cache.get_cache_folder() or _cache.create_new_cache_folder()
+        )
+        logger.info("Using cache at directory: %s. ", download_directory)
     else:
         download_directory = tempfile.mkdtemp()
-        logger.info(f"Creating new temporary directory as download directory: {download_directory}.")
+        logger.info(
+            "Creating new temporary directory as download directory: %s.",
+            download_directory,
+        )
 
-    files = dx.download_files(args.dxids, download_directory, args.ncpus, args.cache, enable_filesystem_caching=args.developer_mode)
+    files = dx.download_files(
+        args.dxids,
+        download_directory,
+        args.ncpus,
+        args.cache,
+        enable_filesystem_caching=args.developer_mode,
+    )
     dfs = read_counts(files, limit_inputs=args.limit_inputs)
 
     result = None
@@ -203,15 +261,24 @@ def download_and_merge_counts(args: argparse.Namespace, merge_mode: str) -> pd.D
     elif merge_mode == "recursive":
         result = join_dataframes_recursively(dfs)
     else:
-        errors.raise_error(f"Merging mode in ALLOWED_MERGE_MODES but behavior is not specified: {merge_mode}.")
+        errors.raise_error(
+            f"Merging mode in ALLOWED_MERGE_MODES but behavior is not specified: {merge_mode}."
+        )
 
     if result is None:
         errors.raise_error(f"Result was `None` for merge mode: {merge_mode}.")
 
+    logger.info(
+        "Checking consistency with original counts files with random sampling check."
+    )
+    randomly_sample_coherence_check(dfs, result)
+
     if not args.developer_mode:
-        logger.info(f"Deleting download directory: {download_directory}.")
+        logger.info("Deleting download directory: %s.", download_directory)
         shutil.rmtree(download_directory, ignore_errors=False, onerror=None)
     else:
-        logger.info(f"Leaving download directory for future cache calls: {download_directory}.")
+        logger.info(
+            "Leaving download directory for future cache calls: %s.", download_directory
+        )
 
     return result

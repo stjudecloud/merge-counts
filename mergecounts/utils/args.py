@@ -1,8 +1,16 @@
+"""Argparse utilities for the merge-counts command line tool."""
+
 import argparse
 import multiprocessing
 
 
-def get_common_args():
+def get_common_args() -> argparse.ArgumentParser:
+    """Common arguments associated with subcommands in this tool.
+
+    Returns:
+        argparse.ArgumentParser: the parser
+    """
+
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument(
         "dxids", help="DNAnexus file ids to generate the matrix with.", nargs="+"
@@ -14,9 +22,9 @@ def get_common_args():
     )
     common.add_argument(
         "--developer-mode",
-        help="Enables caching to speed up development. Note that the cache serializes " +
-        "and deserializes JSON objects without checking for safety. We recommend you " +
-        "only specify this option if you are a developer of this tool!",
+        help="Enables caching to speed up development. Note that the cache serializes "
+        + "and deserializes JSON objects without checking for safety. We recommend you "
+        + "only specify this option if you are a developer of this tool!",
         default=False,
         action="store_true",
     )
@@ -33,8 +41,3 @@ def get_common_args():
         action="store_true",
     )
     return common
-
-
-def get_download_counts_args():
-    download = argparse.ArgumentParser(add_help=False)
-    return download

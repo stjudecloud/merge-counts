@@ -1,16 +1,22 @@
+"""Caching utilities for the merge-counts command line tool."""
+
 import glob
 import os
 import json
 import tempfile
-from .errors import raise_error
-from logzero import logger
 from pathlib import Path
 from typing import Dict, Optional
 
-CACHE_POINTER_LOCATION = Path.home() / '.mergecounts-cache'
+from logzero import logger
+
+from . import errors
+
+CACHE_POINTER_LOCATION = Path.home() / ".mergecounts-cache"
+
 
 class DNAnexusFileCache:
-    
+    """A utility class for keeping up with cached DNAnexus objects."""
+
     def __init__(self):
         """Creates a DNAnexusFileCache object to hold the list of known properties
         and describe calls for each DNAnexus file id.
@@ -20,8 +26,9 @@ class DNAnexusFileCache:
         self.describes = {}
         self.counts = {}
 
-
     def load_from_filesystem(self):
+        """Loads any cached information from the filesystem."""
+
         self.properties = load_cached_properties_from_filesystem()
         self.describes = load_cached_describes_from_filesystem()
 
@@ -29,6 +36,7 @@ class DNAnexusFileCache:
 ##############################
 # Cache folder manipulations #
 ##############################
+
 
 def get_cache_folder() -> Optional[str]:
     """Gets the top level cache folder if it exists in the file at CACHE_POINTER_LOCATION.
@@ -43,11 +51,14 @@ def get_cache_folder() -> Optional[str]:
         return None
 
     # will always be the first line of the file
-    cache_loc = [l.strip() for l in open(CACHE_POINTER_LOCATION, 'r').readlines()][0]
+    cache_loc = [l.strip() for l in open(CACHE_POINTER_LOCATION, "r").readlines()][0]
     if not os.path.exists(cache_loc):
-        raise_error(f"Cache pointed to in {CACHE_POINTER_LOCATION} does not exist! {cache_loc}.")
+        errors.raise_error(
+            f"Cache pointed to in {CACHE_POINTER_LOCATION} does not exist! {cache_loc}."
+        )
 
     return Path(cache_loc)
+
 
 def create_new_cache_folder() -> None:
     """Creates a new cache folder as a temporary dir (assumes that an existing cache instantiated
@@ -56,13 +67,21 @@ def create_new_cache_folder() -> None:
 
     cache_folder_loc = get_cache_folder()
     if cache_folder_loc:
-        raise_error(f"Refusing to overwrite existing cache: {cache_folder_loc}", suggest_report=False)
-    
-    new_cache_loc = tempfile.mkdtemp()
-    with open(CACHE_POINTER_LOCATION, 'w') as f:
-        f.writelines(new_cache_loc)
+        errors.raise_error(
+            f"Refusing to overwrite existing cache: {cache_folder_loc}",
+            suggest_report=False,
+        )
 
-    logger.info(f"Created new cache folder pointer at {CACHE_POINTER_LOCATION} to {new_cache_loc}.")
+    new_cache_loc = tempfile.mkdtemp()
+    with open(CACHE_POINTER_LOCATION, "w") as cache_pointer:
+        cache_pointer.writelines(new_cache_loc)
+
+    logger.info(
+        "Created new cache folder pointer at %s to %s.",
+        CACHE_POINTER_LOCATION,
+        new_cache_loc,
+    )
+
 
 def clean_cache() -> None:
     """Assuming a cache instantied by merge-counts exists, it will clean and remove the cache or
@@ -71,14 +90,15 @@ def clean_cache() -> None:
 
     cache_folder_loc = get_cache_folder()
     if not cache_folder_loc or not os.path.exists(cache_folder_loc):
-        logger.debug(f"No cache folder to delete.")
+        logger.debug("No cache folder to delete.")
     else:
-        logger.debug(f"Removing cache folder: {cache_folder_loc}.")
+        logger.debug("Removing cache folder: %s.", cache_folder_loc)
         os.removedirs(cache_folder_loc)
 
     if os.path.exists(CACHE_POINTER_LOCATION):
-        logger.debug(f"Removing cache folder pointer.")
+        logger.debug("Removing cache folder pointer.")
         os.remove(CACHE_POINTER_LOCATION)
+
 
 def get_cached_properties_folder(silently_create: bool = True) -> Path:
     """Returns the subfolder within the cache that contains all DNAnexus properties for
@@ -96,9 +116,11 @@ def get_cached_properties_folder(silently_create: bool = True) -> Path:
     properties_folder = get_cache_folder() / "properties"
     if not os.path.exists(properties_folder):
         if silently_create:
-            os.makedirs(properties_folder)  
+            os.makedirs(properties_folder)
         else:
-            raise_error(f"Properties subfolder in cache does not exist: {properties_folder}!")
+            errors.raise_error(
+                f"Properties subfolder in cache does not exist: {properties_folder}!"
+            )
 
     return properties_folder
 
@@ -119,9 +141,11 @@ def get_cached_describes_folder(silently_create: bool = True) -> Path:
     describes_folder = get_cache_folder() / "describes"
     if not os.path.exists(describes_folder):
         if silently_create:
-            os.makedirs(describes_folder)  
+            os.makedirs(describes_folder)
         else:
-            raise_error(f"Properties subfolder in cache does not exist: {describes_folder}!")
+            errors.raise_error(
+                f"Properties subfolder in cache does not exist: {describes_folder}!"
+            )
 
     return describes_folder
 
@@ -134,10 +158,10 @@ def cache_properties_on_filesystem(dxid: str, properties: Dict) -> None:
         properties (Dict): DNAnexus properties as a dict.
     """
 
-    cache_filepath = get_cached_properties_folder() / dxid 
+    cache_filepath = get_cached_properties_folder() / dxid
 
-    with open(cache_filepath, 'w') as f:
-        json.dump(properties, f)
+    with open(cache_filepath, "w") as cache:
+        json.dump(properties, cache)
 
 
 def cache_describes_on_filesystem(dxid: str, describe: Dict) -> None:
@@ -148,10 +172,10 @@ def cache_describes_on_filesystem(dxid: str, describe: Dict) -> None:
         describe (Dict): DNAnexus describe call as a dict.
     """
 
-    cache_filepath = get_cached_describes_folder() / dxid 
+    cache_filepath = get_cached_describes_folder() / dxid
 
-    with open(cache_filepath, 'w') as f:
-        json.dump(describe, f)
+    with open(cache_filepath, "w") as cache:
+        json.dump(describe, cache)
 
 
 def load_cached_properties_from_filesystem() -> Dict:
@@ -164,13 +188,13 @@ def load_cached_properties_from_filesystem() -> Dict:
     """
 
     result = dict()
-    
+
     path = str(get_cached_properties_folder() / "*")
     for filename in glob.glob(path):
-        bn = os.path.basename(filename)
-        result[bn] = json.load(open(filename, 'r'))
+        basename = os.path.basename(filename)
+        result[basename] = json.load(open(filename, "r"))
 
-    logger.info(f"Loaded {len(result.items())} entries from the properties cache.")
+    logger.info("Loaded %d entries from the properties cache.", len(result.items()))
     return result
 
 
@@ -184,10 +208,10 @@ def load_cached_describes_from_filesystem() -> Dict:
     """
 
     result = dict()
-    
-    for filename in glob.glob(str(get_cached_describes_folder() / "*")):
-        bn = os.path.basename(filename)
-        result[bn] = json.load(open(filename, 'r'))
 
-    logger.info(f"Loaded {len(result.items())} entries from the describes cache.")
+    for filename in glob.glob(str(get_cached_describes_folder() / "*")):
+        basename = os.path.basename(filename)
+        result[basename] = json.load(open(filename, "r"))
+
+    logger.info("Loaded %d entries from the describes cache.", len(result.items()))
     return result

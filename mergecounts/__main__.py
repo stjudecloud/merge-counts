@@ -2,18 +2,13 @@
 
 import argparse
 import logging
-import math
-import os
-from typing import List, Optional
-from . import metadata, recursive
-from .utils import cache as _cache, dx, errors
-
-import dxpy
-import pandas as pd
-import tqdm
 from logzero import logger
+import pandas as pd
 
-SUBCOMMANDS = [metadata, recursive]
+from . import concordance, metadata, recursive, sequential, utils
+
+SUBCOMMANDS = [concordance, metadata, recursive, sequential]
+
 
 def get_args() -> argparse.Namespace:
     """Gets the command line arguments using argparse.
@@ -29,11 +24,14 @@ def get_args() -> argparse.Namespace:
 
     for subcommand in SUBCOMMANDS:
         if not hasattr(subcommand, "register"):
-            errors.raise_error(f"'{subcommand}' subcommand does not have arguments to register.")
-        
+            utils.errors.raise_error(
+                f"'{subcommand}' subcommand does not have arguments to register."
+            )
+
         subcommand.register(subparsers)
 
     return parser.parse_args()
+
 
 def run() -> None:
     """Main method for module."""
@@ -43,11 +41,12 @@ def run() -> None:
     if args.verbose:
         logger.setLevel(logging.DEBUG)
 
-    args.cache = _cache.DNAnexusFileCache()
+    args.cache = utils.cache.DNAnexusFileCache()
     if args.developer_mode:
+        utils.cache.get_cache_folder() or utils.cache.create_new_cache_folder()
         args.cache.load_from_filesystem()
 
-    result = args.func(args)
+    result = args.run(args)
 
     # if args.subcommand == "concordance-test":
     #     concordance_test(dfs)
@@ -61,8 +60,15 @@ def run() -> None:
     #     result = args.func(dfs)
     #     result_filename = "counts-matrix"
 
-    if not isinstance(result, pd.DataFrame) or not isinstance(args.default_output_filename, str):
-        errors.raise_error("Unhandled case where result or result_filename is not set!")
+    if result is None:
+        return  # if None is returned, there is no output to write (e.g. the concordance test).
+
+    if not isinstance(result, pd.DataFrame) or not isinstance(
+        args.default_output_filename, str
+    ):
+        utils.errors.raise_error(
+            "Unhandled case where result or result_filename is not set!"
+        )
 
     output_file = args.default_output_filename + "." + args.output_file_type
     if args.output_file:
@@ -79,5 +85,3 @@ def run() -> None:
         raise ValueError(
             f"Unhandled output file type: {args.output_file_type}. Please contact the author."
         )
-
-    logger.info("Completed.")

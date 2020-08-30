@@ -1,4 +1,5 @@
-from typing import Optional
+"""Error utilities for the merge-counts command line tool."""
+
 
 def raise_error(
     message: str,
@@ -13,5 +14,5 @@ def raise_error(
     """
     msg = message
     if suggest_report:
-        msg = msg + "\n" + postlude
+        msg = msg + " " + postlude
     raise RuntimeError(msg)
