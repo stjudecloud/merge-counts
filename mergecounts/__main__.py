@@ -43,7 +43,7 @@ def run() -> None:
 
     args.cache = utils.cache.DNAnexusFileCache()
     if args.developer_mode:
-        utils.cache.get_cache_folder() or utils.cache.create_new_cache_folder()
+        _ = utils.cache.get_cache_folder() or utils.cache.create_new_cache_folder()
         args.cache.load_from_filesystem()
 
     result = args.run(args)

@@ -175,8 +175,10 @@ def read_counts(
     expected_shape = dfs[0].shape
     for dataframe in dfs:
         if dataframe.shape != expected_shape:
-            errors.raise_error("Dataframe did not conform to expected shape after download! "+
-                               f"Expected: {expected_shape}, Actual: {dataframe.shape}.")
+            errors.raise_error(
+                "Dataframe did not conform to expected shape after download! "
+                + f"Expected: {expected_shape}, Actual: {dataframe.shape}."
+            )
 
     return dfs
 
