@@ -8,17 +8,17 @@
       <img alt="Actions: CI Status"
           src="https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fstjudecloud%2Fmerge-counts%2Fbadge&style=flat" />
     </a>
-    <a href="https://pypi.org/project/merge-counts/" target="_blank">
+    <a href="https://pypi.org/project/stjudecloud-merge-counts/" target="_blank">
       <img alt="PyPI"
-          src="https://img.shields.io/pypi/v/merge-counts?color=orange">
+          src="https://img.shields.io/pypi/v/stjudecloud-merge-counts?color=orange">
     </a>
-    <a href="https://pypi.python.org/pypi/merge-counts/" target="_blank">
+    <a href="https://pypi.python.org/pypi/stjudecloud-merge-counts/" target="_blank">
       <img alt="PyPI: Downloads"
-          src="https://img.shields.io/pypi/dm/merge-counts?color=orange">
+          src="https://img.shields.io/pypi/dm/stjudecloud-merge-counts?color=orange">
     </a>
-    <a href="https://pypi.python.org/pypi/merge-counts/" target="_blank">
+    <a href="https://pypi.python.org/pypi/stjudecloud-merge-counts/" target="_blank">
       <img alt="PyPI: Downloads"
-          src="https://img.shields.io/pypi/pyversions/merge-counts?color=orange">
+          src="https://img.shields.io/pypi/pyversions/stjudecloud-merge-counts?color=orange">
     </a>
     <a href="https://github.com/stjudecloud/merge-counts/blob/master/LICENSE.md" target="_blank">
     <img alt="License: MIT"
@@ -44,10 +44,10 @@
 
 ### Installation
 
-You can install merge-counts using the Python Package Index ([PyPI](https://pypi.org/)).
+You can install `stjudecloud-merge-counts` using the Python Package Index ([PyPI](https://pypi.org/)).
 
 ```bash
-pip install merge-counts
+pip install stjudecloud-merge-counts
 ```
 
 ## 🖥️ Development
