@@ -23,7 +23,8 @@ DATASET_TO_ID_MAP = OrderedDict(
         ("Genomes 4 Kids (G4K)", "G4K"),
         ("Real-time Clinical Genomics (RTCG)", "RTCG"),
         ("Childhood Solid Tumor Network (CSTN)", "CSTN"),
-        ("Pan-Acute Lymphoblastic Leukemia (PanALL)", "PanALL")
+        ("Pan-Acute Lymphoblastic Leukemia (PanALL)", "PanALL"),
+        ("Pediatric Therapy-related Myeloid Neoplasms (tMN)", "tMN"),
     ]
 )
 
