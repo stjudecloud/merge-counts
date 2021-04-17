@@ -148,7 +148,8 @@ def concordance_test(dfs: List[pd.DataFrame]) -> None:
 
 
 def read_counts(
-    counts: List[tuple], limit_inputs: Optional[int] = None,
+    counts: List[tuple],
+    limit_inputs: Optional[int] = None,
 ) -> List[pd.DataFrame]:
     """Reads dataframes into memory assuming St. Jude Cloud counts files.
 
