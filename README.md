@@ -63,6 +63,7 @@ All four subcommands require a set of DNAnexus file IDs to be supplied as comman
 For feature counts vended from St. Jude Cloud platform, the following example will merge the vended counts into a tab-delimited matrix. Replace `project-G2KfyQ09XB5BBKKf1BXx9ZkK` with the project identifier for your DNAnexus project containing feature counts.
 
 ```dx ls --brief project-G2KfyQ09XB5BBKKf1BXx9ZkK:/immediate/FEATURE_COUNTS/  | xargs stjudecloud-merge-counts recursive```
+
 ## 🖥️ Development
 
 If you are interested in contributing to the code, please first review
