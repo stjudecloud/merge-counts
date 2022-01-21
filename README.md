@@ -56,7 +56,7 @@ pip install stjudecloud-merge-counts
 * `concordance-test` - Performs a `recursive` and `sequential` merge and verifies that the results are concordant.
 * `metadata` - Compiles file metadata into a tab-delimited matrix.
 * `recursive` - Merges count files in a recursive, divide-and-conquer strategy.
-* `sequential` - Merges count files sequentially. This method requires significantly more time than the recursive approach.
+* `sequential` - Merges count files sequentially. This method should produce the same results as `recursive`, but it requires significantly more time than the recursive approach.
 
 All four subcommands require a set of DNAnexus file IDs to be supplied as commandline arguments.
 
