@@ -64,6 +64,12 @@ For feature counts vended from St. Jude Cloud platform, the following example wi
 
 ```dx ls --brief project-G2KfyQ09XB5BBKKf1BXx9ZkK:/immediate/FEATURE_COUNTS/  | xargs stjudecloud-merge-counts recursive```
 
+## Caveats
+
+- When a file belongs to multiple datasets in St. Jude Cloud, we will pick a single dataset name to use for that file based on an ordered priority list. In short, we'll generally choose the _best_ dataset (from the St. Jude Cloud team's perspective). You can find the priority of datasets listed here: https://github.com/stjudecloud/merge-counts/blob/master/mergecounts/utils/dx.py#L19.
+  - So, for example, if the file for SJABCD1234 belongs to both the PCGP and CSTN datasets, the sample name generated will include the PCGP dataset name (since it is higher priority), giving you the column name `SJABCD1234 (PCGP)`.
+
+
 ## 🖥️ Development
 
 If you are interested in contributing to the code, please first review
